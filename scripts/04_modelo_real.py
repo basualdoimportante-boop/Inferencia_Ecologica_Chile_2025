@@ -5,7 +5,7 @@ import os
 import arviz as az
 
 def main():
-    # Semilla para reproducibilidad
+    # Semilla para reproducibilidad en Numpy y PyMC
     np.random.seed(42)
     
     base = r"C:\Users\Martín\Desktop\Inferencia_Ecologica_Chile_2025"
@@ -14,17 +14,17 @@ def main():
     print("Cargando dataset real...")
     df = pd.read_csv(ruta_datos).fillna(0)
     
-    # Calcular totales de 2V y ajustar electores
+    # Calcular totales y ajustar electores
     df['Total_2V'] = df['Kast'] + df['Jara'] + df['Nulos'] + df['Blancos']
     df['Total_Electores'] = df[['Total_Electores', 'Total_2V']].max(axis=1)
     df = df[df['Total_2V'] > 0].copy()
     
-    # Exclusión justificada de outliers extremos (comunas militares/fronterizas)
+    # Exclusión de outliers geográficos (3 comunas extremas)
     comunas_excluidas = ['ANTARTICA', 'COLCHANE', 'GENERAL LAGOS']
     df = df[~df['comuna'].isin(comunas_excluidas)].copy()
     print(f"Comunas excluidas: {comunas_excluidas}. Comunas a modelar: {len(df)}")
     
-    # Separar Nulos/Blancos de Abstención (Ahora son 4 columnas de destino)
+    # Separar Nulos/Blancos de Abstención (4 destinos)
     df['Nulos_Blancos_2V'] = df['Nulos'] + df['Blancos']
     df['Abstencion_2V'] = df['Total_Electores'] - df['Jara'] - df['Kast'] - df['Nulos_Blancos_2V']
 
@@ -64,9 +64,10 @@ def main():
         alpha_dir = p_destino * 10 
         y_obs = pm.Dirichlet("y_obs", a=alpha_dir, observed=y_props)
         
-        # Muestreo
+        # Muestreo (con semilla fija)
         trace_real = pm.sample(draws=2000, tune=2000, chains=2, cores=2, 
-                               target_accept=0.99, return_inferencedata=True, progressbar=True)
+                               target_accept=0.99, random_seed=42, 
+                               return_inferencedata=True, progressbar=True)
 
     print("\n=== DIAGNÓSTICOS DE CONVERGENCIA ===")
     summary = az.summary(trace_real, var_names=["mu_alpha", "beta_educ"])
@@ -81,25 +82,25 @@ def main():
     origenes = ['Jara', 'Kast', 'Parisi', 'Kaiser', 'Matthei', 'Otros', 'No_Voto_1V']
     destinos = ['Jara_2V', 'Kast_2V', 'Nulos_Blancos_2V', 'Abstencion_2V']
     
-    # 1. Guardar matriz completa con intervalos (Para el README)
+    # 1. Guardar matriz completa con intervalos (Usando MEDIA para que sumen 100%)
     resultados = []
-    matrix_numerica = np.zeros((7, 4))
+    matrix_medias = np.zeros((7, 4))
     
     for i, orig in enumerate(origenes):
         fila = {'Origen': orig}
         for j, dest in enumerate(destinos):
-            mediana = np.percentile(theta_flat[:, i, j], 50) * 100
+            media = np.mean(theta_flat[:, i, j]) * 100
             inf = np.percentile(theta_flat[:, i, j], 3) * 100
             sup = np.percentile(theta_flat[:, i, j], 97) * 100
-            fila[dest] = f"{mediana:.1f}% [{inf:.1f}, {sup:.1f}]"
-            matrix_numerica[i, j] = mediana
+            fila[dest] = f"{media:.1f}% [{inf:.1f}, {sup:.1f}]"
+            matrix_medias[i, j] = media
         resultados.append(fila)
         
     df_res = pd.DataFrame(resultados)
     df_res.to_csv(os.path.join(base, "resultados", "matriz_transferencia_intervalos.csv"), index=False)
     
     # 2. Guardar matriz numérica pura (Para el Heatmap)
-    df_num = pd.DataFrame(matrix_numerica, index=origenes, columns=destinos)
+    df_num = pd.DataFrame(matrix_medias, index=origenes, columns=destinos)
     df_num.to_csv(os.path.join(base, "resultados", "matriz_transferencia_numerica.csv"))
     
     # 3. Guardar matriz 3D por comuna (Para las pruebas de cotas)
@@ -108,8 +109,15 @@ def main():
              matriz=matriz_comunas, 
              comunas=df['comuna'].values)
     
-    print("\n=== MATRIZ COMPLETA (Mediana e IC 94%) ===")
+    print("\n=== MATRIZ COMPLETA (Media e IC 94%) ===")
     print(df_res.to_string(index=False))
+    
+    # Verificación de que las filas suman 100%
+    print("\n=== VERIFICACIÓN DE SUMA DE FILAS ===")
+    for i, orig in enumerate(origenes):
+        suma = matrix_medias[i].sum()
+        print(f"Fila {orig}: {suma:.2f}%")
+        
     print("\nLos archivos han sido guardados en la carpeta 'resultados'.")
 
 if __name__ == '__main__':
