@@ -9,13 +9,13 @@ Este proyecto aplica **inferencia ecológica bayesiana jerárquica** (modelo mul
 - Las filas de Kaiser, Matthei y "Otros" tienen intervalos muy amplios. Sus medias no deben interpretarse como estimaciones precisas.
 - La educación superior (Censo 2024) no mejora la capacidad predictiva del modelo. Con esta precisión no hay evidencia de un efecto distinguible de cero.
 
-**Advertencia sobre la Falacia Ecológica:** El modelo estima **probabilidades de transición individual** (ej. "el 49.3% de quienes votaron por Parisi pasaron a Kast"). Estas estimaciones solo son válidas bajo el supuesto de homogeneidad (que las comunas se comportan igual dada su demografía), el cual no se puede verificar con datos agregados.
+**Advertencia sobre la Falacia Ecológica:** El modelo estima **probabilidades de transición individual** (ej. "el 49.3% de quienes votaron por Parisi pasaron a Kast"). Estas estimaciones solo son válidas bajo el supuesto de homogeneidad, el cual no se puede verificar con datos agregados.
 
 ## 📊 Resultados (matriz de transferencia)
 - Modelo: 7 orígenes × 4 destinos (21 parámetros libres porque cada fila suma 100%).
 - Unidades: 341 comunas (se excluyeron Antártica, Colchane y General Lagos).
 - Estimación: 2 cadenas, 2000 iteraciones de ajuste y 2000 de muestreo. `random_seed=42`.
-- Las celdas muestran la **media posterior** e intervalo de credibilidad del 94%. (Las filas suman 100% al usar medias).
+- Las celdas muestran la **media posterior** e intervalo de credibilidad del 94%.
 
 | Origen (1V) | Jara (2V) | Kast (2V) | Nulos/Blancos | Abstención |
 | :--- | :--- | :--- | :--- | :--- |
@@ -28,15 +28,15 @@ Este proyecto aplica **inferencia ecológica bayesiana jerárquica** (modelo mul
 | **No votó 1V** | 9.6% [2.1, 20.0] | 11.0% [2.5, 21.7] | 5.5% [1.5, 11.2] | 73.9% [63.8, 83.1] |
 
 ## 🔬 Pruebas de Validación y Limitaciones
-1. **Calibración (raking), no validación:** El modelo crudo tuvo un error de 4.9% (Jara) y 2.1% (Kast). El raking se usó para cuadrar los totales nacionales. Los intervalos corresponden al modelo crudo. Los totales usados incluyen las 3 comunas excluidas.
-2. **Sensibilidad a la especificación:** Como se mencionó, separar Nulos/Blancos de la Abstención movió la estimación de Parisi->Kast en 10 puntos. Esto demuestra que el modelo es sensible a cómo se agrupan las categorías de destino.
-3. **Sesgo de agregación no testeado:** La simulación sintética recuperó la verdad usando una matriz idéntica para todas las comunas. No se probó un escenario donde la transferencia dependa de la composición comunal, lo cual queda como trabajo futuro.
-4. **Efecto de la Educación:** La comparación LOO no favorece al modelo con educación. El coeficiente Parisi->Kast cruza el cero. No hay evidencia de efecto contextual. Se usó el Censo 2024 (residentes) como proxy del electorado.
+1. **Calibración (raking), no validación:** El modelo crudo tuvo un error de 4.9% (Jara) y 2.1% (Kast). El *raking* se usa para cuadrar los totales nacionales. Los intervalos corresponden al modelo crudo. Los totales usados incluyen las 3 comunas excluidas.
+2. **Sensibilidad a la especificación:** Separar Nulos/Blancos de la Abstención movió la estimación de Parisi->Kast en 10 puntos.
+3. **Sesgo de agregación no testeado:** La simulación sintética recuperó la verdad usando una matriz idéntica para todas las comunas. No se probó un escenario donde la transferencia dependa de la composición comunal.
+4. **Efecto de la Educación:** La comparación LOO no favorece al modelo con educación. El coeficiente Parisi->Kast cruza el cero. Se usó el Censo 2024 (residentes) como *proxy* del electorado.
 5. **Dependencia espacial:** No se modeló la autocorrelación espacial (comunas vecinas). La validación cruzada dejando una comuna fuera es optimista.
 
 ## 📚 Fuentes y Reproducibilidad
 - Resultados SERVEL (1V y 2V 2025) y Censo 2024 (INE). Descargados en Octubre 2026. Datos crudos excluidos por tamaño.
-- `requirements.txt` incluye versiones fijadas. Pipeline: `scripts/01` a `scripts/10`.
+- `requirements.txt` incluye versiones fijadas. *Pipeline*: `scripts/01` a `scripts/10`.
 - `random_seed=42` fijado tanto en Numpy como en PyMC.
 
 ## ⚠️ Ética
